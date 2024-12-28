@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Among Us Role Randomizer</title>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        #roleDisplay { margin-top: 20px; font-size: 1.2em; display: none; opacity: 1; transition: opacity 0.5s ease-in-out; }
+        #roleDisplay.hidden { opacity: 0; }
+        #totals { margin-top: 20px; font-size: 1.2em; display: none; }
+        #nextPlayerMessage { margin-top: 20px; font-style: italic; display: none; }
+        #emergencyButton { width: 100px; height: 100px; background-image: url('normal_button.png'); background-size: cover; border: none; cursor: pointer; margin-top: 20px; }
+        #emergencyButton.pressed { background-image: url('pressed_button.png'); }
+        #meetingArea { display: none; }
+        #voteTimer, #discussionTimer { font-size: 1.5em; margin-bottom: 10px;}
+        #chat { width: 95%; max-height: 150px; overflow-y: scroll; border: 1px solid #ccc; padding: 5px; margin: 10px auto;}
+        .message { margin-bottom: 5px; padding: 3px; border-bottom: 1px solid #eee;}
+        .message strong { font-weight: bold;}
+        #messageInput { width: 95%; margin: 0 auto; display: block; padding: 5px;}
+        #players { display: flex; flex-wrap: wrap; justify-content: center; margin-bottom: 10px;}
+        .player { width: 50px; height: 50px; background-image: url('skin.png'); background-size: cover; border-radius: 50%; display: inline-block; margin: 5px; cursor: pointer; border: 2px solid transparent; }
+        .player.selected { border-color: red; }
+        #voteButton { margin-top: 10px; padding: 8px 16px; font-size: 1em; }
+        #resultsDisplay { margin-top: 20px; font-size: 1.2em; }
+        #totalsDisplay { margin-top: 10px; font-weight: bold;}
+    </style>
+</head>
+<body>
+    <h1>Among Us Role Randomizer</h1>
+    <label for="numPlayers">Players:</label><input type="number" id="numPlayers" min="2" value="5">
+    <label for="numImposters">Imposters:</label><input type="number" id="numImposters" min="1" value="1">
+    <button onclick="startRoleAssignment()">Start</button>
+    <div id="nextPlayerMessage">Go get the next player...</div>
+    <div id="roleDisplay"></div>
+    <div id="totals"></div>
+    <button id="emergencyButton" onclick="triggerEmergency()">Emergency</button>
+    <audio id="emergencySound"><source src="emergency_sound.mp3" type="audio/mpeg"></audio>
+    <div id="meetingArea">
+        <h2>Emergency Meeting</h2>
+        <div id="players"></div>
+        <div id="discussionTimer"></div>
+        <div id="voteTimer"></div>
+        <div id="chat"></div>
+        <input type="text" id="messageInput" placeholder="Type your message...">
+        <button onclick="sendMessage()">Send</button>
+        <button id="voteButton" onclick="castVote()" disabled>Vote</button> <div id="resultsDisplay"></div> <div id="totalsDisplay"></div>
+        <audio id="voteSound"><source src="vote.mp3" type="audio/mpeg"></audio>
+    </div>
+    <script>
+        let players = [];
+        let currentPlayer = 0;
+        let discussionTimerInterval, voteTimerInterval;
+        let emergencyCalled = false;
+        let playersData = [];
+        let selectedPlayer = null;
+
+        function startRoleAssignment() {
+            const numPlayers = parseInt(document.getElementById("numPlayers").value);
+            const numImposters = parseInt(document.getElementById("numImposters").value);
+            if (numImposters >= numPlayers) { alert("Number of imposters cannot be greater than or equal to the number of players."); return; }
+            players = [];
+            for (let i = 0; i < numPlayers; i++) { players.push("Crewmate"); }
+            const imposterIndices = [];
+            while (imposterIndices.length < numImposters) {
+                const randomIndex = Math.floor(Math.random() * numPlayers);
+                if (!imposterIndices.includes(randomIndex)) { imposterIndices.push(randomIndex); players[randomIndex] = "Imposter"; }
+            }
+            currentPlayer = 0; emergencyCalled = false; showNextRole(); document.getElementById("totals").style.display = "none";
+        }
+
+        function showNextRole() {
+            if (currentPlayer < players.length) {
+                const roleDisplay = document.getElementById("roleDisplay");
+                const nextPlayerMessage = document.getElementById("nextPlayerMessage");
+                roleDisplay.textContent = `Player ${currentPlayer + 1}: You are a ${players[currentPlayer]}. (Other players should not see this!)`;
+                roleDisplay.style.display = "block";
+                const nextButton = document.createElement("button");
+                nextButton.textContent = "Next Player";
+                nextButton.onclick = () => {
+                    roleDisplay.classList.add("hidden"); nextPlayerMessage.style.display = "block";
+                    setTimeout(() => {
+                        roleDisplay.style.display = "none"; roleDisplay.classList.remove("hidden"); nextPlayerMessage.style.display = "none"; nextButton.remove(); currentPlayer++; showNextRole();
+                    }, 5000);
+                };
+                roleDisplay.appendChild(nextButton);
+            } else {
+                const crewmateCount = players.filter(role => role === "Crewmate").length;
+                const imposterCount = players.filter(role => role === "Imposter").length;
+                document.getElementById('totals').textContent = `Totals: ${crewmateCount} Crewmates, ${imposterCount} Imposters`;
+                document.getElementById('totals').style.display = "block";
+            }
+        }
+
+        function triggerEmergency() {
+            if (!emergencyCalled) {
+                emergencyButton.classList.add('pressed'); emergencySound.play(); alert("Emergency Meeting Called!");
+                document.getElementById('meetingArea').style.display = 'block'; startDiscussionTimer(); emergencyCalled = true; displayPlayers();
+            } else { alert("Emergency already called!"); }
+        }
+        function displayPlayers(){
+          const playersDiv = document.getElementById('players');
+          playersDiv.innerHTML = '';
+          playersData = [];
+          for (let i = 0; i < players.length; i++) {
+            playersData.push({name: `Player ${i + 1}`, voted: false});
+            const playerDiv = document.createElement('div');
+            playerDiv.classList.add('player');
+            playerDiv.title = `Player ${i + 1}`;
+            playerDiv.dataset.playerIndex = i;
+            playerDiv.addEventListener('click', selectPlayer);
+            playersDiv.appendChild(playerDiv);
+          }
+        }
+        function selectPlayer(event) {
+            if (selectedPlayer) { selectedPlayer.classList.remove('selected'); }
+            selectedPlayer = event.target; selectedPlayer.classList.add('selected');
+            document.getElementById('voteButton').disabled = false;
+        }
+        function castVote() {
+            if (selectedPlayer) {
+                const playerIndex = selectedPlayer.dataset.playerIndex;
+                playersData[playerIndex].voted = true;
+                document.getElementById('voteSound').play();
+                alert(`You voted for ${playersData[playerIndex].name}!`);
+                document.getElementById('voteButton').disabled = true;
+                selectedPlayer.classList.remove('selected');
+                selectedPlayer = null;
+                checkVotingEnd();
+            }
+        }
+        function checkVotingEnd(){
+          if (playersData.every(player => player.voted)) {
+            clearInterval(voteTimerInterval);
+            document.getElementById('voteTimer').textContent = "Voting Ended!";
+            calculateResults();
+          }
+        }
+        function calculateResults() {
+          const voteCounts = {};
+          playersData.forEach(player => {
+            if (player.voted) {
+              const playerName = player.name;
+              voteCounts[playerName] =
