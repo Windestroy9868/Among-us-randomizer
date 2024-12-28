@@ -3,7 +3,6 @@
 <head>
     <title>Among Us Role Randomizer</title>
     <style>
-        /* ... (styles from previous responses) */
         #emergencyButton {
             width: 100px;
             height: 100px;
@@ -29,8 +28,9 @@
     <div id="nextPlayerMessage">Go get the next player...</div>
     <div id="roleDisplay"></div>
     <div id="totals"></div>
-    <button id="emergencyButton" onclick="triggerEmergency()"></button> <audio id="emergencySound"><source src="emergency_sound.mp3" type="audio/mpeg"></audio>
-    <div id="meetingArea">
+    <button id="emergencyButton" onclick="triggerEmergency()"></button>
+    <audio id="emergencySound"><source src="emergency_sound.mp3" type="audio/mpeg"></audio>
+    <div id="meetingArea" style="display:none;">
         <h2>Emergency Meeting</h2>
         <div id="players"></div>
         <div id="discussionTimer"></div>
@@ -38,11 +38,103 @@
         <div id="chat"></div>
         <input type="text" id="messageInput" placeholder="Type your message...">
         <button onclick="sendMessage()">Send</button>
-        <button id="voteButton" onclick="castVote()" disabled>Vote</button> <div id="resultsDisplay"></div> <div id="totalsDisplay"></div>
+        <button id="voteButton" onclick="castVote()" disabled>Vote</button>
+        <div id="resultsDisplay"></div>
+        <div id="totalsDisplay"></div>
         <audio id="voteSound"><source src="vote.mp3" type="audio/mpeg"></audio>
     </div>
     <script>
-        // ... (JavaScript code from previous responses)
+        // Example JavaScript functions
+        
+        function startRoleAssignment() {
+            const numPlayers = parseInt(document.getElementById('numPlayers').value);
+            const numImposters = parseInt(document.getElementById('numImposters').value);
+            if (numImposters >= numPlayers || numImposters <= 0) {
+                alert("Number of imposters should be less than players and more than 0.");
+                return;
+            }
+            // Role assignment logic
+        }
+
+        function randomImposters() {
+            const numPlayers = document.getElementById('numPlayers').value;
+            const numImposters = Math.floor(Math.random() * (numPlayers - 1)) + 1;
+            document.getElementById('numImposters').value = numImposters;
+        }
+        
+        function triggerEmergency() {
+            const emergencyButton = document.getElementById('emergencyButton');
+            const emergencySound = document.getElementById('emergencySound');
+            
+            emergencyButton.classList.add('pressed');
+            emergencySound.play();
+            setTimeout(() => {
+                emergencyButton.classList.remove('pressed');
+            }, 1000);
+            
+            document.getElementById('meetingArea').style.display = 'block';
+            startDiscussionTimer(3);
+            setTimeout(() => {
+                startVotingTimer(25);
+            }, 3000);
+        }
+
+        function sendMessage() {
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value;
+            const chat = document.getElementById('chat');
+            if (message) {
+                const messageElement = document.createElement('div');
+                messageElement.textContent = message;
+                chat.appendChild(messageElement);
+                messageInput.value = '';
+            }
+        }
+        
+        let selectedPlayer = null;
+
+        function selectPlayer(playerId) {
+            selectedPlayer = playerId;
+            document.getElementById('voteButton').disabled = false;
+        }
+
+        function castVote() {
+            if (selectedPlayer === null) return;
+            document.getElementById('voteButton').disabled = true;
+            displayVotingResults();
+        }
+
+        function displayVotingResults() {
+            const resultsDisplay = document.getElementById('resultsDisplay');
+            // Voting results logic
+        }
+
+        function startDiscussionTimer(seconds) {
+            const discussionTimer = document.getElementById('discussionTimer');
+            discussionTimer.textContent = `${seconds} seconds remaining`;
+
+            const interval = setInterval(() => {
+                seconds--;
+                discussionTimer.textContent = `${seconds} seconds remaining`;
+                if (seconds <= 0) {
+                    clearInterval(interval);
+                }
+            }, 1000);
+        }
+
+        function startVotingTimer(seconds) {
+            const voteTimer = document.getElementById('voteTimer');
+            voteTimer.textContent = `${seconds} seconds remaining`;
+
+            const interval = setInterval(() => {
+                seconds--;
+                voteTimer.textContent = `${seconds} seconds remaining`;
+                if (seconds <= 0) {
+                    clearInterval(interval);
+                    // Trigger end of voting phase
+                }
+            }, 1000);
+        }
     </script>
 </body>
 </html>
